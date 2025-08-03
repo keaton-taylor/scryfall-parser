@@ -3,13 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Scryfall CSV Parser</title>
+  <title>Scryfall to Shopify Exporter</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Scryfall CSV Card Parser</h1>
+  <h1>Scryfall to Shopify Exporter</h1>
+  
+  <div class="instructions">
+    <h2>How to use:</h2>
+    <ol>
+      <li>Upload a CSV file with card names in the first column</li>
+      <li>Review the fetched card data and adjust quantities as needed</li>
+      <li>Export to Shopify format using the buttons below</li>
+    </ol>
+    <p><strong>Note:</strong> The CSV should have card names in the first column. Other columns will be ignored.</p>
+  </div>
+
   <input type="file" id="upload" accept=".csv" />
   <div id="results"></div>
+  
   <script src="script.js"></script>
 </body>
 </html>
