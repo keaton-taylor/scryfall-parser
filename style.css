@@ -1,0 +1,10 @@
+
+body {
+  font-family: sans-serif;
+  padding: 2rem;
+}
+#results img {
+  margin: 10px;
+  width: 200px;
+  vertical-align: top;
+}
