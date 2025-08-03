@@ -24,6 +24,33 @@ function updateLogDisplay() {
       </div>
     `).join('');
     logContainer.scrollTop = logContainer.scrollHeight;
+    
+    // Save to local storage
+    saveLogsToStorage();
+  }
+}
+
+function saveLogsToStorage() {
+  try {
+    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const logKey = `scryfall_logs_${timestamp}`;
+    localStorage.setItem(logKey, JSON.stringify(logEntries));
+  } catch (error) {
+    console.warn('Could not save logs to localStorage:', error);
+  }
+}
+
+function loadLogsFromStorage() {
+  try {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const logKey = `scryfall_logs_${timestamp}`;
+    const savedLogs = localStorage.getItem(logKey);
+    if (savedLogs) {
+      logEntries = JSON.parse(savedLogs);
+      updateLogDisplay();
+    }
+  } catch (error) {
+    console.warn('Could not load logs from localStorage:', error);
   }
 }
 
@@ -36,6 +63,12 @@ function getLogTypeColor(type) {
     default: return 'text-gray-600';
   }
 }
+
+// Load any existing logs when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadLogsFromStorage();
+  addLogEntry(`🚀 Scryfall to Shopify Exporter loaded`, 'info');
+});
 
 document.getElementById("upload").addEventListener("change", function(e) {
   const file = e.target.files[0];
@@ -64,6 +97,8 @@ document.getElementById("upload").addEventListener("change", function(e) {
 function parseManaboxCSV(lines) {
   const manaboxData = [];
   
+  addLogEntry(`🔍 Parsing CSV with ${lines.length} lines`, 'info');
+  
   // Skip header row and process data rows
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -91,8 +126,23 @@ function parseManaboxCSV(lines) {
         purchasePriceCurrency: fields[14].trim()
       };
       
-      manaboxData.push(cardData);
+      // Validate that we have essential data
+      if (cardData.name && cardData.name.length > 0) {
+        manaboxData.push(cardData);
+      } else {
+        addLogEntry(`⚠️ Skipping row ${i + 1}: Missing card name`, 'warning');
+      }
+    } else {
+      addLogEntry(`⚠️ Skipping row ${i + 1}: Invalid format (${fields.length} fields, expected 15)`, 'warning');
     }
+  }
+  
+  addLogEntry(`📋 Successfully parsed ${manaboxData.length} valid cards`, 'success');
+  
+  // Log sample data for debugging
+  if (manaboxData.length > 0) {
+    const sample = manaboxData[0];
+    addLogEntry(`📝 Sample card: "${sample.name}" from ${sample.setName} (${sample.setCode})`, 'info');
   }
   
   return manaboxData;
@@ -198,12 +248,31 @@ function fetchCardData(manaboxData) {
   });
   
   function processBatchData(data, batch) {
+    // Validate Scryfall response
+    if (!data || !data.data || !Array.isArray(data.data)) {
+      addLogEntry(`❌ Invalid Scryfall response for batch ${completedBatches + 1}`, 'error');
+      console.error('Invalid Scryfall response:', data);
+      completedBatches++;
+      if (completedBatches === totalBatches) {
+        hideProgressIndicator();
+        autoExportToShopify();
+      }
+      return;
+    }
+    
+    addLogEntry(`📡 Received ${data.data.length} cards from Scryfall for batch ${completedBatches + 1}`, 'info');
+    
     // Merge Scryfall data with Manabox data
     const mergedData = data.data.map(scryfallCard => {
       const manaboxCard = batch.find(mbCard => 
         mbCard.name === scryfallCard.name && 
         mbCard.setCode === scryfallCard.set
       );
+      
+      if (!manaboxCard) {
+        addLogEntry(`⚠️ No Manabox data found for "${scryfallCard.name}" from ${scryfallCard.set}`, 'warning');
+      }
+      
       return {
         ...scryfallCard,
         manaboxData: manaboxCard
@@ -270,15 +339,29 @@ function displayCardsGrid() {
 
 function autoExportToShopify() {
   const container = document.getElementById("results");
-  container.innerHTML = `
-    <div class="my-8 p-6 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
-      <h2 class="text-2xl font-bold mb-4">Processing Complete!</h2>
-      <p class="text-lg">Found ${allCardData.length} cards. Exporting to Shopify format...</p>
-    </div>
-    <div id="log-container" class="mt-6 max-h-64 overflow-y-auto bg-gray-50 border border-gray-200 rounded-lg p-4"></div>
-  `;
+        container.innerHTML = `
+        <div class="my-8 p-6 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
+          <h2 class="text-2xl font-bold mb-4">Processing Complete!</h2>
+          <p class="text-lg">Found ${allCardData.length} cards. Exporting to Shopify format...</p>
+        </div>
+        <div class="mt-6 flex justify-center space-x-4 mb-4">
+          <button onclick="exportLogs()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+            📄 Export Logs
+          </button>
+          <button onclick="copyLogsToClipboard()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+            📋 Copy Logs
+          </button>
+          <button onclick="clearLogs()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
+            🗑️ Clear Logs
+          </button>
+        </div>
+        <div id="log-container" class="mt-6 max-h-64 overflow-y-auto bg-gray-50 border border-gray-200 rounded-lg p-4"></div>
+      `;
   
   addLogEntry(`📤 Starting Shopify export for ${allCardData.length} cards...`, 'info');
+  
+  // Debug current data state
+  debugDataState();
   
   // Auto-export both files
   setTimeout(() => {
@@ -310,6 +393,17 @@ function autoExportToShopify() {
               shopify_inventory.csv - Inventory quantities
             </li>
           </ul>
+        </div>
+        <div class="mt-6 flex justify-center space-x-4 mb-4">
+          <button onclick="exportLogs()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+            📄 Export Logs
+          </button>
+          <button onclick="copyLogsToClipboard()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+            📋 Copy Logs
+          </button>
+          <button onclick="clearLogs()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
+            🗑️ Clear Logs
+          </button>
         </div>
         <div id="log-container" class="mt-6 max-h-64 overflow-y-auto bg-gray-50 border border-gray-200 rounded-lg p-4"></div>
         <div id="cards-container"></div>
@@ -343,6 +437,14 @@ function exportToShopifyBoth() {
 }
 
 function generateShopifyProductsCSV() {
+  addLogEntry(`📝 Generating products CSV for ${allCardData.length} cards`, 'info');
+  
+  // Validate that we have data
+  if (!allCardData || allCardData.length === 0) {
+    addLogEntry(`❌ No card data available for products CSV`, 'error');
+    return "";
+  }
+  
   // Shopify Products CSV format
   const headers = [
     "Handle",
@@ -396,8 +498,15 @@ function generateShopifyProductsCSV() {
   ];
 
   const rows = [headers.join(",")];
+  let validRows = 0;
 
-  allCardData.forEach(card => {
+  allCardData.forEach((card, index) => {
+    // Validate essential card data
+    if (!card.name || !card.set_name) {
+      addLogEntry(`⚠️ Skipping card ${index + 1}: Missing name or set`, 'warning');
+      return;
+    }
+    
     const quantity = getCardQuantity(card);
     const price = card.prices?.usd || "0.00";
     const imageUrl = card.image_uris?.normal || "";
@@ -455,12 +564,22 @@ function generateShopifyProductsCSV() {
     ];
 
     rows.push(row.map(field => `"${field}"`).join(","));
+    validRows++;
   });
 
+  addLogEntry(`✅ Generated ${validRows} product rows`, 'success');
   return rows.join("\n");
 }
 
 function generateShopifyInventoryCSV() {
+  addLogEntry(`📝 Generating inventory CSV for ${allCardData.length} cards`, 'info');
+  
+  // Validate that we have data
+  if (!allCardData || allCardData.length === 0) {
+    addLogEntry(`❌ No card data available for inventory CSV`, 'error');
+    return "";
+  }
+  
   // Shopify Inventory CSV format
   const headers = [
     "Handle",
@@ -469,8 +588,15 @@ function generateShopifyInventoryCSV() {
   ];
 
   const rows = [headers.join(",")];
+  let validRows = 0;
 
-  allCardData.forEach(card => {
+  allCardData.forEach((card, index) => {
+    // Validate essential card data
+    if (!card.name || !card.set_name) {
+      addLogEntry(`⚠️ Skipping card ${index + 1}: Missing name or set`, 'warning');
+      return;
+    }
+    
     const quantity = getCardQuantity(card);
     const row = [
       generateHandle(card.name),
@@ -479,8 +605,10 @@ function generateShopifyInventoryCSV() {
     ];
 
     rows.push(row.map(field => `"${field}"`).join(","));
+    validRows++;
   });
 
+  addLogEntry(`✅ Generated ${validRows} inventory rows`, 'success');
   return rows.join("\n");
 }
 
@@ -559,6 +687,12 @@ function hideProgressIndicator() {
 }
 
 function downloadCSV(content, filename) {
+  // Validate content before downloading
+  if (!content || content.trim().length === 0) {
+    addLogEntry(`❌ Cannot download ${filename}: Content is empty`, 'error');
+    return;
+  }
+  
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   
@@ -573,5 +707,53 @@ function downloadCSV(content, filename) {
     
     const fileSize = (blob.size / 1024).toFixed(1);
     addLogEntry(`💾 Downloaded: ${filename} (${fileSize} KB)`, 'success');
+    
+    // Debug: Show first few lines of content
+    const lines = content.split('\n');
+    const previewLines = lines.slice(0, 3).join('\n');
+    addLogEntry(`📄 ${filename} preview: ${previewLines.substring(0, 100)}...`, 'info');
   }
+}
+
+function debugDataState() {
+  addLogEntry(`🔍 DEBUG: allCardData length = ${allCardData.length}`, 'info');
+  if (allCardData.length > 0) {
+    const sample = allCardData[0];
+    addLogEntry(`🔍 DEBUG: Sample card - Name: "${sample.name}", Set: "${sample.set_name}", Has Manabox: ${!!sample.manaboxData}`, 'info');
+  }
+}
+
+function exportLogs() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const logContent = logEntries.map(entry => 
+    `[${entry.timestamp}] ${entry.message}`
+  ).join('\n');
+  
+  const blob = new Blob([logContent], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `scryfall-logs-${timestamp}.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+  
+  addLogEntry(`📄 Logs exported to scryfall-logs-${timestamp}.txt`, 'success');
+}
+
+function copyLogsToClipboard() {
+  const logContent = logEntries.map(entry => 
+    `[${entry.timestamp}] ${entry.message}`
+  ).join('\n');
+  
+  navigator.clipboard.writeText(logContent).then(() => {
+    addLogEntry(`📋 Logs copied to clipboard`, 'success');
+  }).catch(err => {
+    addLogEntry(`❌ Failed to copy logs: ${err.message}`, 'error');
+  });
+}
+
+function clearLogs() {
+  logEntries = [];
+  updateLogDisplay();
+  addLogEntry(`🗑️ Logs cleared`, 'info');
 }
