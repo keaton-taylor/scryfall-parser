@@ -12,11 +12,12 @@
   <div class="instructions">
     <h2>How to use:</h2>
     <ol>
-      <li>Upload a CSV file with card names in the first column</li>
-      <li>Review the fetched card data and adjust quantities as needed</li>
-      <li>Export to Shopify format using the buttons below</li>
+      <li>Export your collection from Manabox as a CSV file</li>
+      <li>Upload the Manabox CSV file using the button below</li>
+      <li>The tool will automatically fetch Scryfall data and export to Shopify format</li>
+      <li>Two CSV files will be downloaded: shopify_products.csv and shopify_inventory.csv</li>
     </ol>
-    <p><strong>Note:</strong> The CSV should have card names in the first column. Other columns will be ignored.</p>
+    <p><strong>Note:</strong> This tool expects the standard Manabox CSV format with columns: Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, etc.</p>
   </div>
 
   <input type="file" id="upload" accept=".csv" />

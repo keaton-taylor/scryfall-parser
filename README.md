@@ -14,21 +14,19 @@ A web-based tool that fetches Magic: The Gathering card data from Scryfall API a
 
 ## How to Use
 
-1. **Prepare your CSV file** with card names in the first column:
+1. **Export your collection from Manabox** as a CSV file with the standard format:
    ```
-   Lightning Bolt
-   Black Lotus
-   Counterspell
+   Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,ManaBox ID,Scryfall ID,Purchase price,Misprint,Altered,Condition,Language,Purchase price currency
    ```
 
-2. **Upload the CSV** using the file input on the page
+2. **Upload the Manabox CSV** using the file input on the page
 
-3. **Review the fetched data** - cards will be displayed with images and information
+3. **Review the fetched data** - cards will be displayed with images, condition, foil status, and other Manabox data
 
-4. **Adjust quantities** using the number inputs for each card
+4. **Adjust quantities** using the number inputs for each card (pre-filled from Manabox)
 
 5. **Export to Shopify** using one of the export buttons:
-   - **Export Products CSV**: Creates a complete product catalog
+   - **Export Products CSV**: Creates a complete product catalog with Manabox data
    - **Export Inventory CSV**: Creates inventory update file
    - **Export Both**: Downloads both files
 

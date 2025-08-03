@@ -9,99 +9,173 @@ document.getElementById("upload").addEventListener("change", function(e) {
   reader.onload = function(event) {
     const csvData = event.target.result;
     const lines = csvData.split("\n");
-    const cardNames = lines.map(line => line.split(",")[0].trim()).filter(Boolean);
-
+    
+    // Parse Manabox CSV format
+    const manaboxData = parseManaboxCSV(lines);
+    
     // Reset global data
     allCardData = [];
-    fetchCardData(cardNames);
+    fetchCardData(manaboxData);
   };
   reader.readAsText(file);
 });
 
-function fetchCardData(cardNames) {
+function parseManaboxCSV(lines) {
+  const manaboxData = [];
+  
+  // Skip header row and process data rows
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    // Split by comma, but handle quoted fields properly
+    const fields = parseCSVLine(line);
+    
+    if (fields.length >= 15) {
+      const cardData = {
+        name: fields[0].trim(),
+        setCode: fields[1].trim(),
+        setName: fields[2].trim(),
+        collectorNumber: fields[3].trim(),
+        foil: fields[4].trim().toLowerCase() === 'true',
+        rarity: fields[5].trim(),
+        quantity: parseInt(fields[6]) || 1,
+        manaboxId: fields[7].trim(),
+        scryfallId: fields[8].trim(),
+        purchasePrice: parseFloat(fields[9]) || 0,
+        misprint: fields[10].trim().toLowerCase() === 'true',
+        altered: fields[11].trim().toLowerCase() === 'true',
+        condition: fields[12].trim(),
+        language: fields[13].trim(),
+        purchasePriceCurrency: fields[14].trim()
+      };
+      
+      manaboxData.push(cardData);
+    }
+  }
+  
+  return manaboxData;
+}
+
+function parseCSVLine(line) {
+  const fields = [];
+  let currentField = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      fields.push(currentField);
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  
+  fields.push(currentField);
+  return fields;
+}
+
+function fetchCardData(manaboxData) {
   const batched = [];
-  while (cardNames.length) {
-    const batch = cardNames.splice(0, 75);
+  while (manaboxData.length) {
+    const batch = manaboxData.splice(0, 70); // Reduced to 70 cards per batch
     batched.push(batch);
   }
 
   let completedBatches = 0;
   const totalBatches = batched.length;
 
-  batched.forEach(batch => {
-    const body = {
-      identifiers: batch.map(name => ({ name }))
-    };
+  // Show progress indicator
+  showProgressIndicator(totalBatches);
 
-    fetch("https://api.scryfall.com/cards/collection", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    })
-    .then(res => res.json())
-    .then(data => {
-      // Store card data globally
-      allCardData = allCardData.concat(data.data);
-      displayCards(data.data);
+  // Process batches with delays to respect rate limits
+  batched.forEach((batch, index) => {
+    setTimeout(() => {
+      updateProgress(index + 1, totalBatches);
       
-      completedBatches++;
-      if (completedBatches === totalBatches) {
-        // All batches completed, show export buttons
-        showExportButtons();
-      }
-    })
-    .catch(error => {
-      console.error("Error fetching card data:", error);
-      completedBatches++;
-      if (completedBatches === totalBatches) {
-        showExportButtons();
-      }
-    });
+      const body = {
+        identifiers: batch.map(card => ({ 
+          name: card.name,
+          set: card.setCode,
+          collector_number: card.collectorNumber
+        }))
+      };
+
+      fetch("https://api.scryfall.com/cards/collection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(res => res.json())
+      .then(data => {
+        // Merge Scryfall data with Manabox data
+        const mergedData = data.data.map(scryfallCard => {
+          const manaboxCard = batch.find(mbCard => 
+            mbCard.name === scryfallCard.name && 
+            mbCard.setCode === scryfallCard.set
+          );
+          return {
+            ...scryfallCard,
+            manaboxData: manaboxCard
+          };
+        });
+        
+        // Store card data globally
+        allCardData = allCardData.concat(mergedData);
+        
+        completedBatches++;
+        if (completedBatches === totalBatches) {
+          // All batches completed, auto-export
+          hideProgressIndicator();
+          autoExportToShopify();
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching card data:", error);
+        completedBatches++;
+        if (completedBatches === totalBatches) {
+          hideProgressIndicator();
+          autoExportToShopify();
+        }
+      });
+    }, index * 1000); // 1 second delay between each batch
   });
 }
 
-function displayCards(cards) {
+function autoExportToShopify() {
   const container = document.getElementById("results");
-  if (allCardData.length === cards.length) {
-    // First batch, clear container
-    container.innerHTML = "";
-  }
-  
-  cards.forEach(card => {
-    const cardDiv = document.createElement("div");
-    cardDiv.className = "card-item";
-    
-    const img = document.createElement("img");
-    img.src = card.image_uris?.normal || "";
-    img.alt = card.name;
-    
-    const cardInfo = document.createElement("div");
-    cardInfo.className = "card-info";
-    cardInfo.innerHTML = `
-      <h3>${card.name}</h3>
-      <p><strong>Set:</strong> ${card.set_name}</p>
-      <p><strong>Rarity:</strong> ${card.rarity}</p>
-      <p><strong>Price:</strong> $${card.prices?.usd || "N/A"}</p>
-      <input type="number" class="quantity-input" placeholder="Quantity" min="0" value="1" data-card-id="${card.id}">
-    `;
-    
-    cardDiv.appendChild(img);
-    cardDiv.appendChild(cardInfo);
-    container.appendChild(cardDiv);
-  });
-}
-
-function showExportButtons() {
-  const container = document.getElementById("results");
-  const exportDiv = document.createElement("div");
-  exportDiv.className = "export-controls";
-  exportDiv.innerHTML = `
-    <h2>Export to Shopify</h2>
-    <button onclick="exportToShopifyProducts()">Export Products CSV</button>
-    <button onclick="exportToShopifyInventory()">Export Inventory CSV</button>
-    <button onclick="exportToShopifyBoth()">Export Both</button>
+  container.innerHTML = `
+    <div class="export-complete">
+      <h2>Processing Complete!</h2>
+      <p>Found ${allCardData.length} cards. Exporting to Shopify format...</p>
+    </div>
   `;
-  container.appendChild(exportDiv);
+  
+  // Auto-export both files
+  setTimeout(() => {
+    const productsCSV = generateShopifyProductsCSV();
+    const inventoryCSV = generateShopifyInventoryCSV();
+    
+    downloadCSV(productsCSV, "shopify_products.csv");
+    setTimeout(() => {
+      downloadCSV(inventoryCSV, "shopify_inventory.csv");
+      container.innerHTML = `
+        <div class="export-complete">
+          <h2>Export Complete!</h2>
+          <p>Successfully exported ${allCardData.length} cards to Shopify format.</p>
+          <p>Files downloaded:</p>
+          <ul>
+            <li>shopify_products.csv - Complete product catalog</li>
+            <li>shopify_inventory.csv - Inventory quantities</li>
+          </ul>
+        </div>
+      `;
+    }, 200);
+  }, 500);
 }
 
 function exportToShopifyProducts() {
@@ -181,7 +255,7 @@ function generateShopifyProductsCSV() {
   const rows = [headers.join(",")];
 
   allCardData.forEach(card => {
-    const quantity = getCardQuantity(card.id);
+    const quantity = getCardQuantity(card);
     const price = card.prices?.usd || "0.00";
     const imageUrl = card.image_uris?.normal || "";
     
@@ -254,7 +328,7 @@ function generateShopifyInventoryCSV() {
   const rows = [headers.join(",")];
 
   allCardData.forEach(card => {
-    const quantity = getCardQuantity(card.id);
+    const quantity = getCardQuantity(card);
     const row = [
       generateHandle(card.name),
       generateSKU(card),
@@ -283,20 +357,62 @@ function generateSKU(card) {
 }
 
 function generateProductDescription(card) {
+  const manaboxData = card.manaboxData;
+  const condition = manaboxData ? manaboxData.condition : "NM";
+  const foil = manaboxData ? manaboxData.foil : false;
+  const language = manaboxData ? manaboxData.language : "English";
+  
   return `
     <h2>${card.name}</h2>
-    <p><strong>Set:</strong> ${card.set_name}</p>
+    <p><strong>Set:</strong> ${card.set_name} (${manaboxData?.setCode || ""})</p>
     <p><strong>Rarity:</strong> ${card.rarity}</p>
     <p><strong>Type:</strong> ${card.type_line}</p>
+    <p><strong>Condition:</strong> ${condition}</p>
+    <p><strong>Foil:</strong> ${foil ? "Yes" : "No"}</p>
+    <p><strong>Language:</strong> ${language}</p>
     ${card.oracle_text ? `<p><strong>Card Text:</strong><br>${card.oracle_text.replace(/\n/g, '<br>')}</p>` : ""}
     ${card.power && card.toughness ? `<p><strong>Power/Toughness:</strong> ${card.power}/${card.toughness}</p>` : ""}
     <p><strong>Artist:</strong> ${card.artist || "Unknown"}</p>
+    ${manaboxData?.purchasePrice ? `<p><strong>Purchase Price:</strong> ${manaboxData.purchasePrice} ${manaboxData.purchasePriceCurrency}</p>` : ""}
   `.trim();
 }
 
-function getCardQuantity(cardId) {
-  const quantityInput = document.querySelector(`input[data-card-id="${cardId}"]`);
-  return quantityInput ? parseInt(quantityInput.value) || 0 : 1;
+function getCardQuantity(card) {
+  // Use quantity from Manabox data
+  return card.manaboxData ? card.manaboxData.quantity : 1;
+}
+
+function showProgressIndicator(totalBatches) {
+  const container = document.getElementById("results");
+  const progressDiv = document.createElement("div");
+  progressDiv.id = "progress-indicator";
+  progressDiv.className = "progress-indicator";
+  progressDiv.innerHTML = `
+    <h3>Processing ${totalBatches} batches (70 cards each)...</h3>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <p id="progress-text">Starting batch 1 of ${totalBatches}...</p>
+  `;
+  container.appendChild(progressDiv);
+}
+
+function updateProgress(currentBatch, totalBatches) {
+  const progressFill = document.getElementById("progress-fill");
+  const progressText = document.getElementById("progress-text");
+  
+  if (progressFill && progressText) {
+    const percentage = (currentBatch / totalBatches) * 100;
+    progressFill.style.width = `${percentage}%`;
+    progressText.textContent = `Processing batch ${currentBatch} of ${totalBatches} (${currentBatch * 70} cards processed)...`;
+  }
+}
+
+function hideProgressIndicator() {
+  const progressIndicator = document.getElementById("progress-indicator");
+  if (progressIndicator) {
+    progressIndicator.remove();
+  }
 }
 
 function downloadCSV(content, filename) {
