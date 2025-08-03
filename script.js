@@ -146,12 +146,55 @@ function fetchCardData(manaboxData) {
   });
 }
 
+function displayCardsGrid() {
+  const cardsContainer = document.getElementById("cards-container");
+  
+  // Add section header
+  const header = document.createElement("h2");
+  header.className = "text-2xl font-bold text-gray-800 mb-6 text-center mt-8";
+  header.textContent = "Card Collection";
+  cardsContainer.appendChild(header);
+  
+  // Create grid container
+  const gridContainer = document.createElement("div");
+  gridContainer.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4";
+  
+  // Add cards to grid
+  allCardData.forEach(card => {
+    const cardDiv = document.createElement("div");
+    cardDiv.className = "bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow";
+    
+    const manaboxData = card.manaboxData;
+    const quantity = manaboxData ? manaboxData.quantity : 1;
+    const condition = manaboxData ? manaboxData.condition : "NM";
+    const foil = manaboxData ? manaboxData.foil : false;
+    
+    cardDiv.innerHTML = `
+      <div class="relative">
+        <img src="${card.image_uris?.normal || ""}" alt="${card.name}" class="w-full h-48 object-cover">
+        ${foil ? '<div class="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-xs font-bold">FOIL</div>' : ''}
+        ${quantity > 1 ? `<div class="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-bold">×${quantity}</div>` : ''}
+      </div>
+      <div class="p-3">
+        <h3 class="font-semibold text-gray-800 text-sm mb-1 truncate" title="${card.name}">${card.name}</h3>
+        <p class="text-xs text-gray-600 mb-1">${card.set_name}</p>
+        <p class="text-xs text-gray-500 mb-1">${card.rarity} • ${condition}</p>
+        <p class="text-xs font-medium text-green-600">$${card.prices?.usd || "N/A"}</p>
+      </div>
+    `;
+    
+    gridContainer.appendChild(cardDiv);
+  });
+  
+  cardsContainer.appendChild(gridContainer);
+}
+
 function autoExportToShopify() {
   const container = document.getElementById("results");
   container.innerHTML = `
-    <div class="export-complete">
-      <h2>Processing Complete!</h2>
-      <p>Found ${allCardData.length} cards. Exporting to Shopify format...</p>
+    <div class="my-8 p-6 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
+      <h2 class="text-2xl font-bold mb-4">Processing Complete!</h2>
+      <p class="text-lg">Found ${allCardData.length} cards. Exporting to Shopify format...</p>
     </div>
   `;
   
@@ -163,17 +206,29 @@ function autoExportToShopify() {
     downloadCSV(productsCSV, "shopify_products.csv");
     setTimeout(() => {
       downloadCSV(inventoryCSV, "shopify_inventory.csv");
+      
+      // Show export complete message and display cards
       container.innerHTML = `
-        <div class="export-complete">
-          <h2>Export Complete!</h2>
-          <p>Successfully exported ${allCardData.length} cards to Shopify format.</p>
-          <p>Files downloaded:</p>
-          <ul>
-            <li>shopify_products.csv - Complete product catalog</li>
-            <li>shopify_inventory.csv - Inventory quantities</li>
+        <div class="my-8 p-6 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
+          <h2 class="text-2xl font-bold mb-4">Export Complete!</h2>
+          <p class="text-lg mb-4">Successfully exported ${allCardData.length} cards to Shopify format.</p>
+          <p class="font-semibold mb-2">Files downloaded:</p>
+          <ul class="text-left inline-block space-y-1 mb-6">
+            <li class="flex items-center">
+              <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+              shopify_products.csv - Complete product catalog
+            </li>
+            <li class="flex items-center">
+              <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+              shopify_inventory.csv - Inventory quantities
+            </li>
           </ul>
         </div>
+        <div id="cards-container"></div>
       `;
+      
+      // Display cards in rows of 5
+      displayCardsGrid();
     }, 200);
   }, 500);
 }
@@ -386,13 +441,13 @@ function showProgressIndicator(totalBatches) {
   const container = document.getElementById("results");
   const progressDiv = document.createElement("div");
   progressDiv.id = "progress-indicator";
-  progressDiv.className = "progress-indicator";
+  progressDiv.className = "my-8 p-6 bg-gray-50 border border-gray-200 rounded-lg text-center";
   progressDiv.innerHTML = `
-    <h3>Processing ${totalBatches} batches (70 cards each)...</h3>
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress-fill"></div>
+    <h3 class="text-xl font-semibold text-gray-800 mb-4">Processing ${totalBatches} batches (70 cards each)...</h3>
+    <div class="w-full bg-gray-200 rounded-full h-5 mb-4">
+      <div class="bg-blue-600 h-5 rounded-full transition-all duration-300" id="progress-fill" style="width: 0%"></div>
     </div>
-    <p id="progress-text">Starting batch 1 of ${totalBatches}...</p>
+    <p id="progress-text" class="text-gray-600">Starting batch 1 of ${totalBatches}...</p>
   `;
   container.appendChild(progressDiv);
 }

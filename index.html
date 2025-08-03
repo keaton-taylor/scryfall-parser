@@ -4,24 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Scryfall to Shopify Exporter</title>
-  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>Scryfall to Shopify Exporter</h1>
-  
-  <div class="instructions">
-    <h2>How to use:</h2>
-    <ol>
-      <li>Export your collection from Manabox as a CSV file</li>
-      <li>Upload the Manabox CSV file using the button below</li>
-      <li>The tool will automatically fetch Scryfall data and export to Shopify format</li>
-      <li>Two CSV files will be downloaded: shopify_products.csv and shopify_inventory.csv</li>
-    </ol>
-    <p><strong>Note:</strong> This tool expects the standard Manabox CSV format with columns: Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, etc.</p>
-  </div>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-4xl mx-auto p-8">
+    <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Scryfall to Shopify Exporter</h1>
+    
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">How to use:</h2>
+      <ol class="list-decimal list-inside space-y-2 text-gray-700">
+        <li>Export your collection from Manabox as a CSV file</li>
+        <li>Upload the Manabox CSV file using the button below</li>
+        <li>The tool will automatically fetch Scryfall data and export to Shopify format</li>
+        <li>Two CSV files will be downloaded: shopify_products.csv and shopify_inventory.csv</li>
+      </ol>
+      <p class="mt-4 text-gray-600 italic"><strong>Note:</strong> This tool expects the standard Manabox CSV format with columns: Name, Set code, Set name, Collector number, Foil, Rarity, Quantity, etc.</p>
+    </div>
 
-  <input type="file" id="upload" accept=".csv" />
-  <div id="results"></div>
+    <div class="flex justify-center mb-8">
+      <input type="file" id="upload" accept=".csv" class="block w-80 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-blue-400 transition-colors cursor-pointer" />
+    </div>
+    
+    <div id="results"></div>
+  </div>
   
   <script src="script.js"></script>
 </body>
