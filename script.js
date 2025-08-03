@@ -1,9 +1,47 @@
 // Global variable to store all fetched card data
 let allCardData = [];
+let logEntries = [];
+
+// Logging function
+function addLogEntry(message, type = 'info') {
+  const timestamp = new Date().toLocaleTimeString();
+  const entry = {
+    timestamp,
+    message,
+    type
+  };
+  logEntries.push(entry);
+  updateLogDisplay();
+}
+
+function updateLogDisplay() {
+  const logContainer = document.getElementById('log-container');
+  if (logContainer) {
+    logContainer.innerHTML = logEntries.map(entry => `
+      <div class="flex items-center space-x-3 py-2 border-b border-gray-100 last:border-b-0">
+        <span class="text-xs text-gray-500 font-mono">${entry.timestamp}</span>
+        <span class="text-sm ${getLogTypeColor(entry.type)}">${entry.message}</span>
+      </div>
+    `).join('');
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+}
+
+function getLogTypeColor(type) {
+  switch (type) {
+    case 'success': return 'text-green-600';
+    case 'error': return 'text-red-600';
+    case 'warning': return 'text-yellow-600';
+    case 'info': return 'text-blue-600';
+    default: return 'text-gray-600';
+  }
+}
 
 document.getElementById("upload").addEventListener("change", function(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  addLogEntry(`📁 Uploaded: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
 
   const reader = new FileReader();
   reader.onload = function(event) {
@@ -13,8 +51,11 @@ document.getElementById("upload").addEventListener("change", function(e) {
     // Parse Manabox CSV format
     const manaboxData = parseManaboxCSV(lines);
     
+    addLogEntry(`📊 Parsed ${manaboxData.length} cards from CSV`, 'success');
+    
     // Reset global data
     allCardData = [];
+    logEntries = []; // Clear previous logs
     fetchCardData(manaboxData);
   };
   reader.readAsText(file);
@@ -89,6 +130,8 @@ function fetchCardData(manaboxData) {
   let completedBatches = 0;
   const totalBatches = batched.length;
 
+  addLogEntry(`🔄 Starting to fetch ${manaboxData.length} cards in ${totalBatches} batches`, 'info');
+
   // Show progress indicator
   showProgressIndicator(totalBatches);
 
@@ -110,40 +153,76 @@ function fetchCardData(manaboxData) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       })
-      .then(res => res.json())
+      .then(res => {
+        if (res.status === 429) {
+          // Rate limit hit, wait longer and retry
+          console.warn("Rate limit hit, waiting 2 seconds before retry...");
+          setTimeout(() => {
+            // Retry the same batch
+            fetch("https://api.scryfall.com/cards/collection", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body)
+            })
+            .then(res => res.json())
+            .then(data => processBatchData(data, batch))
+            .catch(error => {
+              console.error("Error on retry:", error);
+              addLogEntry(`❌ Retry failed for batch ${completedBatches + 1}: ${error.message}`, 'error');
+              completedBatches++;
+              if (completedBatches === totalBatches) {
+                hideProgressIndicator();
+                autoExportToShopify();
+              }
+            });
+          }, 2000);
+          return;
+        }
+        return res.json();
+      })
       .then(data => {
-        // Merge Scryfall data with Manabox data
-        const mergedData = data.data.map(scryfallCard => {
-          const manaboxCard = batch.find(mbCard => 
-            mbCard.name === scryfallCard.name && 
-            mbCard.setCode === scryfallCard.set
-          );
-          return {
-            ...scryfallCard,
-            manaboxData: manaboxCard
-          };
-        });
-        
-        // Store card data globally
-        allCardData = allCardData.concat(mergedData);
-        
-        completedBatches++;
-        if (completedBatches === totalBatches) {
-          // All batches completed, auto-export
-          hideProgressIndicator();
-          autoExportToShopify();
+        if (data) {
+          processBatchData(data, batch);
         }
       })
       .catch(error => {
         console.error("Error fetching card data:", error);
+        addLogEntry(`❌ Error fetching batch ${completedBatches + 1}: ${error.message}`, 'error');
         completedBatches++;
         if (completedBatches === totalBatches) {
           hideProgressIndicator();
           autoExportToShopify();
         }
       });
-    }, index * 1000); // 1 second delay between each batch
+    }, index * 200); // 200ms delay between batches (5 requests per second, well under the 10/sec limit)
   });
+  
+  function processBatchData(data, batch) {
+    // Merge Scryfall data with Manabox data
+    const mergedData = data.data.map(scryfallCard => {
+      const manaboxCard = batch.find(mbCard => 
+        mbCard.name === scryfallCard.name && 
+        mbCard.setCode === scryfallCard.set
+      );
+      return {
+        ...scryfallCard,
+        manaboxData: manaboxCard
+      };
+    });
+    
+    // Store card data globally
+    allCardData = allCardData.concat(mergedData);
+    
+    completedBatches++;
+    addLogEntry(`✅ Batch ${completedBatches}/${totalBatches} completed (${mergedData.length} cards)`, 'success');
+    
+    if (completedBatches === totalBatches) {
+      // All batches completed, auto-export
+      addLogEntry(`🎉 All ${allCardData.length} cards fetched successfully!`, 'success');
+      hideProgressIndicator();
+      autoExportToShopify();
+    }
+  }
 }
 
 function displayCardsGrid() {
@@ -196,16 +275,24 @@ function autoExportToShopify() {
       <h2 class="text-2xl font-bold mb-4">Processing Complete!</h2>
       <p class="text-lg">Found ${allCardData.length} cards. Exporting to Shopify format...</p>
     </div>
+    <div id="log-container" class="mt-6 max-h-64 overflow-y-auto bg-gray-50 border border-gray-200 rounded-lg p-4"></div>
   `;
+  
+  addLogEntry(`📤 Starting Shopify export for ${allCardData.length} cards...`, 'info');
   
   // Auto-export both files
   setTimeout(() => {
     const productsCSV = generateShopifyProductsCSV();
     const inventoryCSV = generateShopifyInventoryCSV();
     
+    addLogEntry(`📝 Generated shopify_products.csv`, 'info');
     downloadCSV(productsCSV, "shopify_products.csv");
+    
     setTimeout(() => {
+      addLogEntry(`📝 Generated shopify_inventory.csv`, 'info');
       downloadCSV(inventoryCSV, "shopify_inventory.csv");
+      
+      addLogEntry(`🎉 Export completed successfully!`, 'success');
       
       // Show export complete message and display cards
       container.innerHTML = `
@@ -224,6 +311,7 @@ function autoExportToShopify() {
             </li>
           </ul>
         </div>
+        <div id="log-container" class="mt-6 max-h-64 overflow-y-auto bg-gray-50 border border-gray-200 rounded-lg p-4"></div>
         <div id="cards-container"></div>
       `;
       
@@ -482,5 +570,8 @@ function downloadCSV(content, filename) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    const fileSize = (blob.size / 1024).toFixed(1);
+    addLogEntry(`💾 Downloaded: ${filename} (${fileSize} KB)`, 'success');
   }
 }
