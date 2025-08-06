@@ -337,7 +337,17 @@ function displayCardsGrid() {
   cardsContainer.appendChild(gridContainer);
 }
 
+// Global flag to prevent multiple exports
+let exportInProgress = false;
+
 function autoExportToShopify() {
+  // Prevent multiple simultaneous exports
+  if (exportInProgress) {
+    addLogEntry(`⚠️ Export already in progress, skipping duplicate call`, 'warning');
+    return;
+  }
+  exportInProgress = true;
+  
   const container = document.getElementById("results");
         container.innerHTML = `
         <div class="my-8 p-6 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
@@ -370,9 +380,12 @@ function autoExportToShopify() {
     addLogEntry(`📝 Generated shopify_products.csv with all product data`, 'info');
     downloadCSV(productsCSV, "shopify_products.csv");
       
-      addLogEntry(`🎉 Export completed successfully!`, 'success');
-      
-      // Show export complete message and display cards
+          addLogEntry(`🎉 Export completed successfully!`, 'success');
+    
+    // Reset export flag
+    exportInProgress = false;
+    
+    // Show export complete message and display cards
       container.innerHTML = `
         <div class="my-8 p-6 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
           <h2 class="text-2xl font-bold mb-4">Export Complete!</h2>
@@ -400,8 +413,8 @@ function autoExportToShopify() {
         <div id="cards-container"></div>
       `;
       
-    // Display cards in rows of 5
-    displayCardsGrid();
+      // Display cards in rows of 5
+      displayCardsGrid();
   }, 500);
 }
 
@@ -411,19 +424,15 @@ function exportToShopifyProducts() {
 }
 
 function exportToShopifyInventory() {
-  const csvContent = generateShopifyInventoryCSV();
-  downloadCSV(csvContent, "shopify_inventory.csv");
+  // Deprecated - now exports single unified CSV
+  const csvContent = generateShopifyProductsCSV();
+  downloadCSV(csvContent, "shopify_products.csv");
 }
 
 function exportToShopifyBoth() {
+  // Deprecated - now exports single unified CSV
   const productsCSV = generateShopifyProductsCSV();
-  const inventoryCSV = generateShopifyInventoryCSV();
-  
-  // Create a zip file or download both separately
   downloadCSV(productsCSV, "shopify_products.csv");
-  setTimeout(() => {
-    downloadCSV(inventoryCSV, "shopify_inventory.csv");
-  }, 100);
 }
 
 function generateShopifyProductsCSV() {
@@ -436,76 +445,7 @@ function generateShopifyProductsCSV() {
   }
   
   // Exact Shopify Products CSV format - user specified headers in exact order
-  const headers = [
-    "Handle",
-    "Title",
-    "Body (HTML)",
-    "Vendor",
-    "Product Category",
-    "Type",
-    "Tags",
-    "Published",
-    "Option1 Name",
-    "Option1 Value",
-    "Option1 Linked To",
-    "Option2 Name",
-    "Option2 Value",
-    "Option2 Linked To",
-    "Option3 Name",
-    "Option3 Value",
-    "Option3 Linked To",
-    "Variant SKU",
-    "Variant Grams",
-    "Variant Inventory Tracker",
-    "Variant Inventory Policy",
-    "Variant Fulfillment Service",
-    "Variant Price",
-    "Variant Compare At Price",
-    "Variant Requires Shipping",
-    "Variant Taxable",
-    "Variant Barcode",
-    "Image Src",
-    "Image Position",
-    "Image Alt Text",
-    "Gift Card",
-    "SEO Title",
-    "SEO Description",
-    "Google Shopping / Google Product Category",
-    "Google Shopping / Gender",
-    "Google Shopping / Age Group",
-    "Google Shopping / MPN",
-    "Google Shopping / Condition",
-    "Google Shopping / Custom Product",
-    "Google Shopping / Custom Label 0",
-    "Google Shopping / Custom Label 1",
-    "Google Shopping / Custom Label 2",
-    "Google Shopping / Custom Label 3",
-    "Google Shopping / Custom Label 4",
-    "Google: Custom Product (product.metafields.mm-google-shopping.custom_product)",
-    "Age group (product.metafields.shopify.age-group)",
-    "Card attributes (product.metafields.shopify.card-attributes)",
-    "Color (product.metafields.shopify.color-pattern)",
-    "Condition (product.metafields.shopify.condition)",
-    "Dice shape (product.metafields.shopify.dice-shape)",
-    "Fabric (product.metafields.shopify.fabric)",
-    "Neckline (product.metafields.shopify.neckline)",
-    "Rarity (product.metafields.shopify.rarity)",
-    "Recommended age group (product.metafields.shopify.recommended-age-group)",
-    "Sleeve length type (product.metafields.shopify.sleeve-length-type)",
-    "Target gender (product.metafields.shopify.target-gender)",
-    "Theme (product.metafields.shopify.theme)",
-    "Top length type (product.metafields.shopify.top-length-type)",
-    "Toy/Game material (product.metafields.shopify.toy-game-material)",
-    "Complementary products (product.metafields.shopify--discovery--product_recommendation.complementary_products)",
-    "Related products (product.metafields.shopify--discovery--product_recommendation.related_products)",
-    "Related products settings (product.metafields.shopify--discovery--product_recommendation.related_products_display)",
-    "Search product boosts (product.metafields.shopify--discovery--product_search_boost.queries)",
-    "Variant Image",
-    "Variant Weight Unit",
-    "Variant Tax Code",
-    "Cost per item",
-    "Status"
-  ];
+  const headers = "Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Option1 Linked To,Option2 Name,Option2 Value,Option2 Linked To,Option3 Name,Option3 Value,Option3 Linked To,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Google: Custom Product (product.metafields.mm-google-shopping.custom_product),Age group (product.metafields.shopify.age-group),Card attributes (product.metafields.shopify.card-attributes),Color (product.metafields.shopify.color-pattern),Condition (product.metafields.shopify.condition),Dice shape (product.metafields.shopify.dice-shape),Fabric (product.metafields.shopify.fabric),Neckline (product.metafields.shopify.neckline),Rarity (product.metafields.shopify.rarity),Recommended age group (product.metafields.shopify.recommended-age-group),Sleeve length type (product.metafields.shopify.sleeve-length-type),Target gender (product.metafields.shopify.target-gender),Theme (product.metafields.shopify.theme),Top length type (product.metafields.shopify.top-length-type),Toy/Game material (product.metafields.shopify.toy-game-material),Complementary products (product.metafields.shopify--discovery--product_recommendation.complementary_products),Related products (product.metafields.shopify--discovery--product_recommendation.related_products),Related products settings (product.metafields.shopify--discovery--product_recommendation.related_products_display),Search product boosts (product.metafields.shopify--discovery--product_search_boost.queries),Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Status".split(",");
 
   const rows = [headers.join(",")];
   let validRows = 0;
@@ -526,8 +466,8 @@ function generateShopifyProductsCSV() {
       card.name || "",                                              // Title
       generateProductDescription(card),                             // Body (HTML)
       "Harmless Offering",                                       // Vendor
-      "Trading Cards",                                              // Product Category
-      "Trading Card",                                               // Type
+      "Arts & Entertainment > Hobbies & Creative Arts > Collectibles > Collectible Trading Cards > Gaming Cards",                                              // Product Category
+      "MTG Singles",                                               // Type
       generateTags(card),                                           // Tags
       "TRUE",                                                       // Published
       "Condition",                                                  // Option1 Name
@@ -542,6 +482,7 @@ function generateShopifyProductsCSV() {
       generateSKU(card),                                           // Variant SKU
       "5",                                                         // Variant Grams
       "shopify",                                                   // Variant Inventory Tracker
+      quantity,                                                    // Variant Inventory Qty
       "deny",                                                      // Variant Inventory Policy
       "manual",                                                    // Variant Fulfillment Service
       price,                                                       // Variant Price
@@ -600,45 +541,10 @@ function generateShopifyProductsCSV() {
   return rows.join("\n");
 }
 
+// DEPRECATED: generateShopifyInventoryCSV - now using single unified CSV export
 function generateShopifyInventoryCSV() {
-  addLogEntry(`📝 Generating inventory CSV for ${allCardData.length} cards`, 'info');
-  
-  // Validate that we have data
-  if (!allCardData || allCardData.length === 0) {
-    addLogEntry(`❌ No card data available for inventory CSV`, 'error');
-    return "";
-  }
-  
-  // Shopify Inventory CSV format
-  const headers = [
-    "Handle",
-    "Variant SKU",
-    "Variant Inventory Qty"
-  ];
-
-  const rows = [headers.join(",")];
-  let validRows = 0;
-
-  allCardData.forEach((card, index) => {
-    // Validate essential card data
-    if (!card.name || !card.set_name) {
-      addLogEntry(`⚠️ Skipping card ${index + 1}: Missing name or set`, 'warning');
-      return;
-    }
-    
-    const quantity = getCardQuantity(card);
-    const row = [
-      generateHandle(card),
-      generateSKU(card),
-      quantity
-    ];
-
-    rows.push(row.map(field => `"${field}"`).join(","));
-    validRows++;
-  });
-
-  addLogEntry(`✅ Generated ${validRows} inventory rows`, 'success');
-  return rows.join("\n");
+  addLogEntry(`⚠️ generateShopifyInventoryCSV is deprecated - using unified products CSV instead`, 'warning');
+  return generateShopifyProductsCSV();
 }
 
 function generateHandle(card) {
@@ -661,24 +567,32 @@ function generateSKU(card) {
 }
 
 function generateProductDescription(card) {
-  const manaboxData = card.manaboxData;
-  const condition = manaboxData ? manaboxData.condition : "NM";
-  const foil = manaboxData ? manaboxData.foil : false;
-  const language = manaboxData ? manaboxData.language : "English";
+  // Follow the pattern: <p>Type Line - Rules Text</p>
+  let description = "";
   
-  return `
-    <h2>${card.name}</h2>
-    <p><strong>Set:</strong> ${card.set_name} (${manaboxData?.setCode || ""})</p>
-    <p><strong>Rarity:</strong> ${card.rarity}</p>
-    <p><strong>Type:</strong> ${card.type_line}</p>
-    <p><strong>Condition:</strong> ${condition}</p>
-    <p><strong>Foil:</strong> ${foil ? "Yes" : "No"}</p>
-    <p><strong>Language:</strong> ${language}</p>
-    ${card.oracle_text ? `<p><strong>Card Text:</strong><br>${card.oracle_text.replace(/\n/g, '<br>')}</p>` : ""}
-    ${card.power && card.toughness ? `<p><strong>Power/Toughness:</strong> ${card.power}/${card.toughness}</p>` : ""}
-    <p><strong>Artist:</strong> ${card.artist || "Unknown"}</p>
-    ${manaboxData?.purchasePrice ? `<p><strong>Purchase Price:</strong> ${manaboxData.purchasePrice} ${manaboxData.purchasePriceCurrency}</p>` : ""}
-  `.trim();
+  if (card.type_line) {
+    description += `<p>${card.type_line}`;
+    
+    // Add power/toughness for creatures
+    if (card.power && card.toughness) {
+      description += ` - ${card.power}/${card.toughness}`;
+    }
+    
+    // Add oracle text if available
+    if (card.oracle_text) {
+      description += ` - ${card.oracle_text.replace(/\n/g, '<br>')}`;
+    }
+    
+    description += "</p>";
+  } else if (card.oracle_text) {
+    // If no type line but has oracle text, just show the oracle text
+    description = `<p>${card.oracle_text.replace(/\n/g, '<br>')}</p>`;
+  } else {
+    // Fallback if no type line or oracle text
+    description = `<p>${card.name || ""}</p>`;
+  }
+  
+  return description;
 }
 
 function getCardQuantity(card) {
@@ -697,21 +611,86 @@ function getCardFoil(card) {
 }
 
 function generateTags(card) {
-  // Generate comma-separated tags for the card
+  // Generate tags using actual Scryfall data and keywords
   const tags = [];
   
-  if (card && card.set_name) tags.push(card.set_name);
-  if (card && card.rarity) tags.push(card.rarity);
+  // Add set code (always first)
+  if (card && card.set) {
+    tags.push(card.set.toUpperCase());
+  }
+  
+  // Add Scryfall keywords if available
+  if (card && card.keywords && Array.isArray(card.keywords)) {
+    tags.push(...card.keywords);
+  }
+  
+  // Add main card types from type_line
   if (card && card.type_line) {
-    // Extract main card types (e.g., "Creature", "Artifact", etc.)
-    const types = card.type_line.split(/[—\-]|\s+/).filter(t => 
-      ["Creature", "Artifact", "Enchantment", "Instant", "Sorcery", "Land", "Planeswalker"].includes(t)
+    // Extract main types before any subtypes (before —)
+    const mainTypes = card.type_line.split(/\s*[—\-]\s*/)[0];
+    const types = mainTypes.split(/\s+/).filter(t => 
+      ["Legendary", "Artifact", "Creature", "Enchantment", "Instant", "Sorcery", "Land", "Planeswalker", "Battle"].includes(t)
     );
     tags.push(...types);
   }
-  if (card && card.manaboxData && card.manaboxData.foil) tags.push("Foil");
   
-  return tags.length > 0 ? tags.join(",") : "";
+  // Add colors based on color identity or colors
+  if (card && card.colors && card.colors.length > 0) {
+    const colorMap = {
+      'W': 'White',
+      'U': 'Blue', 
+      'B': 'Black',
+      'R': 'Red',
+      'G': 'Green'
+    };
+    if (card.colors.length === 1) {
+      tags.push(colorMap[card.colors[0]] || card.colors[0]);
+    } else if (card.colors.length > 1) {
+      tags.push("Multicolor");
+    }
+  } else if (card && card.color_identity && card.color_identity.length > 0) {
+    const colorMap = { 'W': 'White', 'U': 'Blue', 'B': 'Black', 'R': 'Red', 'G': 'Green' };
+    if (card.color_identity.length === 1) {
+      tags.push(colorMap[card.color_identity[0]] || card.color_identity[0]);
+    } else if (card.color_identity.length > 1) {
+      tags.push("Multicolor");
+    }
+  } else {
+    tags.push("Colorless");
+  }
+  
+  // Add mana value
+  if (card && typeof card.cmc === 'number') {
+    tags.push(`MV${card.cmc}`);
+  }
+  
+  // Add foil status
+  if (card && card.manaboxData && card.manaboxData.foil) {
+    tags.push("Foil");
+  } else {
+    tags.push("Non-Foil");
+  }
+  
+  // Add rarity if available
+  if (card && card.rarity) {
+    const rarityMap = {
+      'common': 'Common',
+      'uncommon': 'Uncommon', 
+      'rare': 'Rare',
+      'mythic': 'Mythic Rare'
+    };
+    tags.push(rarityMap[card.rarity.toLowerCase()] || card.rarity);
+  }
+  
+  // Add language (default to English)
+  const language = (card && card.manaboxData && card.manaboxData.language) || "English";
+  if (language !== "English") {
+    tags.push(language);
+  } else {
+    tags.push("English");
+  }
+  
+  return tags.length > 0 ? tags.join(", ") : "";
 }
 
 function generateCardAttributes(card) {
