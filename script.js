@@ -363,17 +363,12 @@ function autoExportToShopify() {
   // Debug current data state
   debugDataState();
   
-  // Auto-export both files
+    // Auto-export single unified CSV file
   setTimeout(() => {
     const productsCSV = generateShopifyProductsCSV();
-    const inventoryCSV = generateShopifyInventoryCSV();
     
-    addLogEntry(`📝 Generated shopify_products.csv`, 'info');
+    addLogEntry(`📝 Generated shopify_products.csv with all product data`, 'info');
     downloadCSV(productsCSV, "shopify_products.csv");
-    
-    setTimeout(() => {
-      addLogEntry(`📝 Generated shopify_inventory.csv`, 'info');
-      downloadCSV(inventoryCSV, "shopify_inventory.csv");
       
       addLogEntry(`🎉 Export completed successfully!`, 'success');
       
@@ -382,15 +377,11 @@ function autoExportToShopify() {
         <div class="my-8 p-6 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
           <h2 class="text-2xl font-bold mb-4">Export Complete!</h2>
           <p class="text-lg mb-4">Successfully exported ${allCardData.length} cards to Shopify format.</p>
-          <p class="font-semibold mb-2">Files downloaded:</p>
+          <p class="font-semibold mb-2">File downloaded:</p>
           <ul class="text-left inline-block space-y-1 mb-6">
             <li class="flex items-center">
               <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-              shopify_products.csv - Complete product catalog
-            </li>
-            <li class="flex items-center">
-              <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-              shopify_inventory.csv - Inventory quantities
+              shopify_products.csv - Complete unified product catalog with all data
             </li>
           </ul>
         </div>
@@ -409,9 +400,8 @@ function autoExportToShopify() {
         <div id="cards-container"></div>
       `;
       
-      // Display cards in rows of 5
-      displayCardsGrid();
-    }, 200);
+    // Display cards in rows of 5
+    displayCardsGrid();
   }, 500);
 }
 
@@ -445,7 +435,7 @@ function generateShopifyProductsCSV() {
     return "";
   }
   
-  // Shopify Products CSV format
+  // Exact Shopify Products CSV format - user specified headers in exact order
   const headers = [
     "Handle",
     "Title",
@@ -457,14 +447,16 @@ function generateShopifyProductsCSV() {
     "Published",
     "Option1 Name",
     "Option1 Value",
+    "Option1 Linked To",
     "Option2 Name",
     "Option2 Value",
+    "Option2 Linked To",
     "Option3 Name",
     "Option3 Value",
+    "Option3 Linked To",
     "Variant SKU",
     "Variant Grams",
     "Variant Inventory Tracker",
-    "Variant Inventory Qty",
     "Variant Inventory Policy",
     "Variant Fulfillment Service",
     "Variant Price",
@@ -474,6 +466,7 @@ function generateShopifyProductsCSV() {
     "Variant Barcode",
     "Image Src",
     "Image Position",
+    "Image Alt Text",
     "Gift Card",
     "SEO Title",
     "SEO Description",
@@ -481,8 +474,6 @@ function generateShopifyProductsCSV() {
     "Google Shopping / Gender",
     "Google Shopping / Age Group",
     "Google Shopping / MPN",
-    "Google Shopping / AdWords Grouping",
-    "Google Shopping / AdWords Labels",
     "Google Shopping / Condition",
     "Google Shopping / Custom Product",
     "Google Shopping / Custom Label 0",
@@ -490,6 +481,25 @@ function generateShopifyProductsCSV() {
     "Google Shopping / Custom Label 2",
     "Google Shopping / Custom Label 3",
     "Google Shopping / Custom Label 4",
+    "Google: Custom Product (product.metafields.mm-google-shopping.custom_product)",
+    "Age group (product.metafields.shopify.age-group)",
+    "Card attributes (product.metafields.shopify.card-attributes)",
+    "Color (product.metafields.shopify.color-pattern)",
+    "Condition (product.metafields.shopify.condition)",
+    "Dice shape (product.metafields.shopify.dice-shape)",
+    "Fabric (product.metafields.shopify.fabric)",
+    "Neckline (product.metafields.shopify.neckline)",
+    "Rarity (product.metafields.shopify.rarity)",
+    "Recommended age group (product.metafields.shopify.recommended-age-group)",
+    "Sleeve length type (product.metafields.shopify.sleeve-length-type)",
+    "Target gender (product.metafields.shopify.target-gender)",
+    "Theme (product.metafields.shopify.theme)",
+    "Top length type (product.metafields.shopify.top-length-type)",
+    "Toy/Game material (product.metafields.shopify.toy-game-material)",
+    "Complementary products (product.metafields.shopify--discovery--product_recommendation.complementary_products)",
+    "Related products (product.metafields.shopify--discovery--product_recommendation.related_products)",
+    "Related products settings (product.metafields.shopify--discovery--product_recommendation.related_products_display)",
+    "Search product boosts (product.metafields.shopify--discovery--product_search_boost.queries)",
     "Variant Image",
     "Variant Weight Unit",
     "Variant Tax Code",
@@ -508,59 +518,78 @@ function generateShopifyProductsCSV() {
     }
     
     const quantity = getCardQuantity(card);
-    const price = card.prices?.usd || "0.00";
-    const imageUrl = card.image_uris?.normal || "";
+    const price = (card && card.prices && card.prices.usd) ? card.prices.usd : "0.00";
+    const imageUrl = (card && card.image_uris && card.image_uris.normal) ? card.image_uris.normal : "";
     
     const row = [
-      generateHandle(card.name),
-      card.name,
-      generateProductDescription(card),
-      "Magic: The Gathering",
-      "Trading Cards",
-      "Trading Card",
-      `${card.set_name},${card.rarity}`,
-      "TRUE",
-      "Title",
-      card.name,
-      "Set",
-      card.set_name,
-      "Rarity",
-      card.rarity,
-      generateSKU(card),
-      "5", // Default weight in grams
-      "shopify",
-      quantity,
-      "deny",
-      "manual",
-      price,
-      "",
-      "TRUE",
-      "TRUE",
-      "",
-      imageUrl, // This will be the image URL from Scryfall
-      "1",
-      "FALSE",
-      card.name,
-      `Magic: The Gathering ${card.name} from ${card.set_name}`,
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "g",
-      "",
-      price,
-      "active"
+      generateHandle(card),                                         // Handle
+      card.name || "",                                              // Title
+      generateProductDescription(card),                             // Body (HTML)
+      "Harmless Offering",                                       // Vendor
+      "Trading Cards",                                              // Product Category
+      "Trading Card",                                               // Type
+      generateTags(card),                                           // Tags
+      "TRUE",                                                       // Published
+      "Condition",                                                  // Option1 Name
+      getCardCondition(card),                                       // Option1 Value
+      "",                                                          // Option1 Linked To
+      "Foil",                                                       // Option2 Name
+      getCardFoil(card),                                           // Option2 Value
+      "",                                                          // Option2 Linked To
+      "Set",                                                        // Option3 Name
+      card.set_name || "",                                         // Option3 Value
+      "",                                                          // Option3 Linked To
+      generateSKU(card),                                           // Variant SKU
+      "5",                                                         // Variant Grams
+      "shopify",                                                   // Variant Inventory Tracker
+      "deny",                                                      // Variant Inventory Policy
+      "manual",                                                    // Variant Fulfillment Service
+      price,                                                       // Variant Price
+      "",                                                          // Variant Compare At Price
+      "TRUE",                                                      // Variant Requires Shipping
+      "TRUE",                                                      // Variant Taxable
+      "",                                                          // Variant Barcode
+      imageUrl,                                                    // Image Src
+      "1",                                                         // Image Position
+      `${card.name || ""} - ${card.set_name || ""}`,             // Image Alt Text
+      "FALSE",                                                     // Gift Card
+      card.name || "",                                             // SEO Title
+      `Magic: The Gathering ${card.name || ""} from ${card.set_name || ""}`,  // SEO Description
+      "",                                                          // Google Shopping / Google Product Category
+      "",                                                          // Google Shopping / Gender
+      "",                                                          // Google Shopping / Age Group
+      "",                                                          // Google Shopping / MPN
+      "new",                                                       // Google Shopping / Condition
+      "",                                                          // Google Shopping / Custom Product
+      card.rarity || "",                                           // Google Shopping / Custom Label 0
+      card.set_name || "",                                         // Google Shopping / Custom Label 1
+      card.type_line || "",                                        // Google Shopping / Custom Label 2
+      "",                                                          // Google Shopping / Custom Label 3
+      "",                                                          // Google Shopping / Custom Label 4
+      "",                                                          // Google: Custom Product (product.metafields.mm-google-shopping.custom_product)
+      "",                                                          // Age group (product.metafields.shopify.age-group)
+      generateCardAttributes(card),                                // Card attributes (product.metafields.shopify.card-attributes)
+      generateCardColors(card),                                    // Color (product.metafields.shopify.color-pattern)
+      getCardCondition(card),                                      // Condition (product.metafields.shopify.condition)
+      "",                                                          // Dice shape (product.metafields.shopify.dice-shape)
+      "",                                                          // Fabric (product.metafields.shopify.fabric)
+      "",                                                          // Neckline (product.metafields.shopify.neckline)
+      card.rarity || "",                                           // Rarity (product.metafields.shopify.rarity)
+      "",                                                          // Recommended age group (product.metafields.shopify.recommended-age-group)
+      "",                                                          // Sleeve length type (product.metafields.shopify.sleeve-length-type)
+      "",                                                          // Target gender (product.metafields.shopify.target-gender)
+      "",                                                          // Theme (product.metafields.shopify.theme)
+      "",                                                          // Top length type (product.metafields.shopify.top-length-type)
+      "",                                                          // Toy/Game material (product.metafields.shopify.toy-game-material)
+      "",                                                          // Complementary products (product.metafields.shopify--discovery--product_recommendation.complementary_products)
+      "",                                                          // Related products (product.metafields.shopify--discovery--product_recommendation.related_products)
+      "",                                                          // Related products settings (product.metafields.shopify--discovery--product_recommendation.related_products_display)
+      "",                                                          // Search product boosts (product.metafields.shopify--discovery--product_search_boost.queries)
+      "",                                                          // Variant Image
+      "g",                                                         // Variant Weight Unit
+      "",                                                          // Variant Tax Code
+      price,                                                       // Cost per item
+      "active"                                                     // Status
     ];
 
     rows.push(row.map(field => `"${field}"`).join(","));
@@ -599,7 +628,7 @@ function generateShopifyInventoryCSV() {
     
     const quantity = getCardQuantity(card);
     const row = [
-      generateHandle(card.name),
+      generateHandle(card),
       generateSKU(card),
       quantity
     ];
@@ -612,13 +641,17 @@ function generateShopifyInventoryCSV() {
   return rows.join("\n");
 }
 
-function generateHandle(name) {
-  return name
+function generateHandle(card) {
+  const setCode = (card.set || "UNK").toLowerCase();
+  const cardNumber = card.collector_number || "000";
+  const cardName = card.name
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .trim();
+  
+  return `${setCode}-${cardNumber}-${cardName}`;
 }
 
 function generateSKU(card) {
@@ -651,6 +684,65 @@ function generateProductDescription(card) {
 function getCardQuantity(card) {
   // Use quantity from Manabox data
   return card.manaboxData ? card.manaboxData.quantity : 1;
+}
+
+function getCardCondition(card) {
+  // Get condition from Manabox data, default to Near Mint
+  return card.manaboxData ? card.manaboxData.condition : "Near Mint";
+}
+
+function getCardFoil(card) {
+  // Get foil status from Manabox data
+  return card.manaboxData && card.manaboxData.foil ? "Foil" : "Non-Foil";
+}
+
+function generateTags(card) {
+  // Generate comma-separated tags for the card
+  const tags = [];
+  
+  if (card && card.set_name) tags.push(card.set_name);
+  if (card && card.rarity) tags.push(card.rarity);
+  if (card && card.type_line) {
+    // Extract main card types (e.g., "Creature", "Artifact", etc.)
+    const types = card.type_line.split(/[—\-]|\s+/).filter(t => 
+      ["Creature", "Artifact", "Enchantment", "Instant", "Sorcery", "Land", "Planeswalker"].includes(t)
+    );
+    tags.push(...types);
+  }
+  if (card && card.manaboxData && card.manaboxData.foil) tags.push("Foil");
+  
+  return tags.length > 0 ? tags.join(",") : "";
+}
+
+function generateCardAttributes(card) {
+  // Generate card attributes for metafields
+  const attributes = [];
+  
+  if (card.mana_cost) attributes.push(`Mana Cost: ${card.mana_cost}`);
+  if (card.cmc) attributes.push(`CMC: ${card.cmc}`);
+  if (card.power && card.toughness) attributes.push(`Power/Toughness: ${card.power}/${card.toughness}`);
+  if (card.collector_number) attributes.push(`Collector Number: ${card.collector_number}`);
+  
+  return attributes.join(" | ");
+}
+
+function generateCardColors(card) {
+  // Generate color information from card colors
+  if (card && card.colors && card.colors.length > 0) {
+    const colorMap = {
+      'W': 'White',
+      'U': 'Blue', 
+      'B': 'Black',
+      'R': 'Red',
+      'G': 'Green'
+    };
+    return card.colors.map(c => colorMap[c] || c).join(",");
+  }
+  if (card && card.color_identity && card.color_identity.length > 0) {
+    const colorMap = { 'W': 'White', 'U': 'Blue', 'B': 'Black', 'R': 'Red', 'G': 'Green' };
+    return card.color_identity.map(c => colorMap[c] || c).join(",");
+  }
+  return "Colorless";
 }
 
 function showProgressIndicator(totalBatches) {
