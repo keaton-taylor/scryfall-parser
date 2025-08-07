@@ -293,7 +293,13 @@ function fetchCardData(manaboxData) {
         mergedCard.language = manaboxCard.language || "English";
         
         // For foil status, prioritize Manabox data over Scryfall data
+        if (manaboxCard.name.includes("Drill Too Deep")) {
+          console.log(`MERGE DRILL: Before merge - mergedCard.foil: ${mergedCard.foil}, manaboxCard.foil: ${manaboxCard.foil}`);
+        }
         mergedCard.foil = manaboxCard.foil;
+        if (manaboxCard.name.includes("Drill Too Deep")) {
+          console.log(`MERGE DRILL: After merge - mergedCard.foil: ${mergedCard.foil}`);
+        }
         
         // Debug logging for foil data
       } else {
@@ -653,9 +659,18 @@ function getCardCondition(card) {
 }
 
 function getCardFoil(card) {
+  // Debug for Drill Too Deep
+  if (card && card.name && card.name.includes("Drill Too Deep")) {
+    console.log(`GETFOIL DRILL: card.foil: ${card.foil}, type: ${typeof card.foil}`);
+  }
+  
   // Prioritize Manabox foil data (from merged card data)
   if (card && card.foil !== undefined) {
-    return card.foil ? "Foil" : "Non-Foil";
+    const result = card.foil ? "Foil" : "Non-Foil";
+    if (card && card.name && card.name.includes("Drill Too Deep")) {
+      console.log(`GETFOIL DRILL: returning "${result}"`);
+    }
+    return result;
   }
   
   // Fallback to Scryfall data if Manabox data is not available
