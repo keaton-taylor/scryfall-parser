@@ -262,20 +262,35 @@ function fetchCardData(manaboxData) {
     
     addLogEntry(`📡 Received ${data.data.length} cards from Scryfall for batch ${completedBatches + 1}`, 'info');
     
-    // Merge Scryfall data with Manabox data
+    // Merge Scryfall data with Manabox data - Scryfall is primary
     const mergedData = data.data.map(scryfallCard => {
       const manaboxCard = batch.find(mbCard => 
         mbCard.name === scryfallCard.name && 
         mbCard.setCode === scryfallCard.set
       );
       
-      // Note: It's normal to not have Manabox data for all cards
-      // Cards will still be processed with Scryfall data and default values
+      // Start with Scryfall data as the base
+      const mergedCard = { ...scryfallCard };
       
-      return {
-        ...scryfallCard,
-        manaboxData: manaboxCard
-      };
+      // Merge Manabox data into Scryfall structure where appropriate
+      if (manaboxCard) {
+        // Add Manabox-specific fields that Scryfall doesn't provide
+        mergedCard.quantity = manaboxCard.quantity || 1;
+        mergedCard.condition = manaboxCard.condition || "Near Mint";
+        mergedCard.language = manaboxCard.language || "English";
+        
+        // For foil status, prioritize Scryfall data but use Manabox as fallback
+        if (!mergedCard.finishes && !mergedCard.prices?.usd_foil && mergedCard.foil === undefined) {
+          mergedCard.foil = manaboxCard.foil || false;
+        }
+      } else {
+        // Default values when no Manabox data exists
+        mergedCard.quantity = 1;
+        mergedCard.condition = "Near Mint";
+        mergedCard.language = "English";
+      }
+      
+      return mergedCard;
     });
     
     // Store card data globally
@@ -311,10 +326,9 @@ function displayCardsGrid() {
     const cardDiv = document.createElement("div");
     cardDiv.className = "bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow";
     
-    const manaboxData = card.manaboxData;
-    const quantity = manaboxData ? manaboxData.quantity : 1;
-    const condition = manaboxData ? manaboxData.condition : "NM";
-    const foil = manaboxData ? manaboxData.foil : false;
+    const quantity = card.quantity || 1;
+    const condition = card.condition || "NM";
+    const foil = getCardFoil(card) === "Foil";
     
     cardDiv.innerHTML = `
       <div class="relative">
@@ -614,18 +628,43 @@ function generateProductDescription(card) {
 }
 
 function getCardQuantity(card) {
-  // Use quantity from Manabox data
-  return card.manaboxData ? card.manaboxData.quantity : 1;
+  // Use quantity from merged data (Scryfall + Manabox)
+  return card.quantity || 1;
 }
 
 function getCardCondition(card) {
-  // Get condition from Manabox data, default to Near Mint
-  return card.manaboxData ? card.manaboxData.condition : "Near Mint";
+  // Get condition from merged data (Scryfall + Manabox)
+  return card.condition || "Near Mint";
 }
 
 function getCardFoil(card) {
-  // Get foil status from Manabox data
-  return card.manaboxData && card.manaboxData.foil ? "Foil" : "Non-Foil";
+  // Check Scryfall data first for foil information
+  if (card && card.finishes && Array.isArray(card.finishes)) {
+    // Scryfall provides finishes array - check if it includes 'foil'
+    if (card.finishes.includes('foil')) {
+      return "Foil";
+    } else if (card.finishes.includes('nonfoil')) {
+      return "Non-Foil";
+    }
+  }
+  
+  // Check if card has foil-specific pricing (indicates foil version exists)
+  if (card && card.prices && (card.prices.usd_foil || card.prices.usd_etched)) {
+    return "Foil";
+  }
+  
+  // Check for foil in card properties
+  if (card && card.foil !== undefined) {
+    return card.foil ? "Foil" : "Non-Foil";
+  }
+  
+  // Check merged foil data as fallback
+  if (card && card.foil !== undefined) {
+    return card.foil ? "Foil" : "Non-Foil";
+  }
+  
+  // Default to Non-Foil if no foil information is available
+  return "Non-Foil";
 }
 
 function generateTags(card) {
@@ -682,12 +721,9 @@ function generateTags(card) {
     tags.push(`MV${card.cmc}`);
   }
   
-  // Add foil status
-  if (card && card.manaboxData && card.manaboxData.foil) {
-    tags.push("Foil");
-  } else {
-    tags.push("Non-Foil");
-  }
+  // Add foil status using Scryfall data first
+  const foilStatus = getCardFoil(card);
+  tags.push(foilStatus);
   
   // Add rarity if available
   if (card && card.rarity) {
@@ -700,13 +736,9 @@ function generateTags(card) {
     tags.push(rarityMap[card.rarity.toLowerCase()] || card.rarity);
   }
   
-  // Add language (default to English)
-  const language = (card && card.manaboxData && card.manaboxData.language) || "English";
-  if (language !== "English") {
-    tags.push(language);
-  } else {
-    tags.push("English");
-  }
+  // Add language from merged data
+  const language = card.language || "English";
+  tags.push(language);
   
   return tags.length > 0 ? tags.join(", ") : "";
 }
@@ -808,7 +840,7 @@ function debugDataState() {
   addLogEntry(`🔍 DEBUG: allCardData length = ${allCardData.length}`, 'info');
   if (allCardData.length > 0) {
     const sample = allCardData[0];
-    addLogEntry(`🔍 DEBUG: Sample card - Name: "${sample.name}", Set: "${sample.set_name}", Has Manabox: ${!!sample.manaboxData}`, 'info');
+    addLogEntry(`🔍 DEBUG: Sample card - Name: "${sample.name}", Set: "${sample.set_name}", Quantity: ${sample.quantity || 1}, Condition: ${sample.condition || "Near Mint"}`, 'info');
   }
 }
 
