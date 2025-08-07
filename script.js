@@ -113,7 +113,7 @@ function parseManaboxCSV(lines) {
         setCode: fields[1].trim(),
         setName: fields[2].trim(),
         collectorNumber: fields[3].trim(),
-        foil: fields[4].trim().toLowerCase() === 'true',
+        foil: fields[4].trim().toLowerCase() === 'foil',
         rarity: fields[5].trim(),
         quantity: parseInt(fields[6]) || 1,
         manaboxId: fields[7].trim(),
