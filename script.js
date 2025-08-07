@@ -570,8 +570,15 @@ function escapeCSVField(field) {
     return "";
   }
   // Convert to string and escape quotes by doubling them
-  const stringField = String(field);
-  return stringField.replace(/"/g, '""');
+  let stringField = String(field);
+  
+  // Replace all possible newline characters with <br> tags
+  stringField = stringField.replace(/\r\n|\r|\n|\u2028|\u2029/g, '<br>');
+  
+  // Escape quotes by doubling them
+  stringField = stringField.replace(/"/g, '""');
+  
+  return stringField;
 }
 
 function generateProductDescription(card) {
@@ -588,15 +595,15 @@ function generateProductDescription(card) {
     
     // Add oracle text if available
     if (card.oracle_text) {
-      // Replace newlines with <br> tags
-      const oracleText = card.oracle_text.replace(/\n/g, '<br>');
+      // Replace all possible newline characters with <br> tags
+      const oracleText = card.oracle_text.replace(/\r\n|\r|\n|\u2028|\u2029/g, '<br>');
       description += ` - ${oracleText}`;
     }
     
     description += "</p>";
   } else if (card.oracle_text) {
     // If no type line but has oracle text, just show the oracle text
-    const oracleText = card.oracle_text.replace(/\n/g, '<br>');
+    const oracleText = card.oracle_text.replace(/\r\n|\r|\n|\u2028|\u2029/g, '<br>');
     description = `<p>${oracleText}</p>`;
   } else {
     // Fallback if no type line or oracle text
