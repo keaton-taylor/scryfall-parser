@@ -281,6 +281,13 @@ function fetchCardData(manaboxData) {
         mbCard.setCode === scryfallCard.set
       );
       
+      // Debug card matching for Drill Too Deep
+      if (scryfallCard.name.includes("Drill Too Deep")) {
+        console.log(`MATCH DRILL: Scryfall name: "${scryfallCard.name}", set: "${scryfallCard.set}"`);
+        console.log(`MATCH DRILL: Batch cards:`, batch.map(mb => `"${mb.name}" (${mb.setCode})`));
+        console.log(`MATCH DRILL: Found match:`, manaboxCard ? `YES - ${manaboxCard.name} (${manaboxCard.setCode})` : 'NO');
+      }
+      
       
       // Start with Scryfall data as the base
       const mergedCard = { ...scryfallCard };
