@@ -469,11 +469,11 @@ function generateShopifyProductsCSV() {
       "MTG Singles",                                               // Type
       generateTags(card),                                           // Tags
       "TRUE",                                                       // Published
-      "Condition",                                                  // Option1 Name
-      getCardCondition(card),                                       // Option1 Value
+      "Finish Type",                                                // Option1 Name
+      getCardFoil(card),                                           // Option1 Value
       "",                                                          // Option1 Linked To
-      "Foil",                                                       // Option2 Name
-      getCardFoil(card),                                           // Option2 Value
+      "Condition",                                                  // Option2 Name
+      getCardCondition(card),                                       // Option2 Value
       "",                                                          // Option2 Linked To
       "Set",                                                        // Option3 Name
       card.set_name || "",                                         // Option3 Value
