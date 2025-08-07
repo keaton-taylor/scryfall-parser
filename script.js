@@ -532,7 +532,7 @@ function generateShopifyProductsCSV() {
       "active"                                                     // Status
     ];
 
-    rows.push(row.map(field => `"${field}"`).join(","));
+    rows.push(row.map(field => `"${escapeCSVField(field)}"`).join(","));
     validRows++;
   });
 
@@ -565,6 +565,15 @@ function generateSKU(card) {
   return `${setCode}-${cardNumber}`;
 }
 
+function escapeCSVField(field) {
+  if (field === null || field === undefined) {
+    return "";
+  }
+  // Convert to string and escape quotes by doubling them
+  const stringField = String(field);
+  return stringField.replace(/"/g, '""');
+}
+
 function generateProductDescription(card) {
   // Follow the pattern: <p>Type Line - Rules Text</p>
   let description = "";
@@ -579,13 +588,16 @@ function generateProductDescription(card) {
     
     // Add oracle text if available
     if (card.oracle_text) {
-      description += ` - ${card.oracle_text.replace(/\n/g, '<br>')}`;
+      // Replace newlines with <br> tags
+      const oracleText = card.oracle_text.replace(/\n/g, '<br>');
+      description += ` - ${oracleText}`;
     }
     
     description += "</p>";
   } else if (card.oracle_text) {
     // If no type line but has oracle text, just show the oracle text
-    description = `<p>${card.oracle_text.replace(/\n/g, '<br>')}</p>`;
+    const oracleText = card.oracle_text.replace(/\n/g, '<br>');
+    description = `<p>${oracleText}</p>`;
   } else {
     // Fallback if no type line or oracle text
     description = `<p>${card.name || ""}</p>`;
