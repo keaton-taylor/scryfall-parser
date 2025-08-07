@@ -641,9 +641,17 @@ function getCardCondition(card) {
 }
 
 function getCardFoil(card) {
+  // Debug specific card
+  if (card && card.name && card.name.includes("Drill Too Deep")) {
+    console.log(`DEBUG DRILL: ${card.name} - card.foil: ${card.foil}, type: ${typeof card.foil}, card object:`, card);
+  }
+  
   // Prioritize Manabox foil data (from merged card data)
   if (card && card.foil !== undefined) {
     const result = card.foil ? "Foil" : "Non-Foil";
+    if (card && card.name && card.name.includes("Drill Too Deep")) {
+      console.log(`DEBUG DRILL RESULT: ${card.name} - returning: ${result}`);
+    }
     return result;
   }
   
