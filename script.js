@@ -131,6 +131,11 @@ function parseManaboxCSV(lines) {
         purchasePriceCurrency: fields[14].trim()
       };
       
+      // Debug parsing for Drill Too Deep
+      if (cardData.name.includes("Drill Too Deep")) {
+        console.log(`PARSE DRILL: "${cardData.name}" - field[4]: "${fields[4]}", parsed foil: ${cardData.foil}`);
+      }
+      
       // Debug logging for parsing
       
       // Validate that we have essential data
