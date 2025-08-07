@@ -286,6 +286,7 @@ function fetchCardData(manaboxData) {
         mergedCard.quantity = 1;
         mergedCard.condition = "Near Mint";
         mergedCard.language = "English";
+        mergedCard.foil = false; // Default to non-foil when no Manabox data
       }
       
       return mergedCard;
@@ -651,13 +652,11 @@ function getCardFoil(card) {
     }
   }
   
-  // Check if card has foil-specific pricing (indicates foil version exists)
-  if (card && card.prices && (card.prices.usd_foil || card.prices.usd_etched)) {
-    return "Foil";
-  }
+  // Don't use pricing as foil indicator - many cards have both foil and non-foil prices
+  // This was incorrectly marking all cards as foil
   
-  // No default - return empty string if no foil information is available
-  return "";
+  // Default to Non-Foil if no foil information is available
+  return "Non-Foil";
 }
 
 function generateTags(card) {
