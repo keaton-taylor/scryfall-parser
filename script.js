@@ -127,7 +127,6 @@ function parseManaboxCSV(lines) {
       };
       
       // Debug logging for parsing
-      console.log(`DEBUG PARSE: ${cardData.name} - Original field: "${fields[4].trim()}", Parsed foil: ${cardData.foil}`);
       
       // Validate that we have essential data
       if (cardData.name && cardData.name.length > 0) {
@@ -286,7 +285,6 @@ function fetchCardData(manaboxData) {
         mergedCard.foil = manaboxCard.foil;
         
         // Debug logging for foil data
-        console.log(`DEBUG MERGE: ${manaboxCard.name} - Manabox foil: ${manaboxCard.foil}, Merged foil: ${mergedCard.foil}`);
       } else {
         // Default values when no Manabox data exists
         mergedCard.quantity = 1;
@@ -643,13 +641,9 @@ function getCardCondition(card) {
 }
 
 function getCardFoil(card) {
-  // Debug logging
-  console.log(`DEBUG GETFOIL: ${card.name} - card.foil: ${card.foil}, type: ${typeof card.foil}`);
-  
   // Prioritize Manabox foil data (from merged card data)
   if (card && card.foil !== undefined) {
     const result = card.foil ? "Foil" : "Non-Foil";
-    console.log(`DEBUG GETFOIL RESULT: ${card.name} - returning: ${result}`);
     return result;
   }
   
