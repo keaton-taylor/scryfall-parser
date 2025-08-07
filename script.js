@@ -131,10 +131,6 @@ function parseManaboxCSV(lines) {
         purchasePriceCurrency: fields[14].trim()
       };
       
-      // Debug parsing for Drill Too Deep
-      if (cardData.name.includes("Drill Too Deep")) {
-        console.log(`PARSE DRILL: "${cardData.name}" - field[4]: "${fields[4]}", parsed foil: ${cardData.foil}`);
-      }
       
       // Debug logging for parsing
       
@@ -278,15 +274,9 @@ function fetchCardData(manaboxData) {
     const mergedData = data.data.map(scryfallCard => {
       const manaboxCard = batch.find(mbCard => 
         mbCard.name === scryfallCard.name && 
-        mbCard.setCode === scryfallCard.set
+        mbCard.setCode.toLowerCase() === scryfallCard.set.toLowerCase()
       );
       
-      // Debug card matching for Drill Too Deep
-      if (scryfallCard.name.includes("Drill Too Deep")) {
-        console.log(`MATCH DRILL: Scryfall name: "${scryfallCard.name}", set: "${scryfallCard.set}"`);
-        console.log(`MATCH DRILL: Batch cards:`, batch.map(mb => `"${mb.name}" (${mb.setCode})`));
-        console.log(`MATCH DRILL: Found match:`, manaboxCard ? `YES - ${manaboxCard.name} (${manaboxCard.setCode})` : 'NO');
-      }
       
       
       // Start with Scryfall data as the base
@@ -300,13 +290,7 @@ function fetchCardData(manaboxData) {
         mergedCard.language = manaboxCard.language || "English";
         
         // For foil status, prioritize Manabox data over Scryfall data
-        if (manaboxCard.name.includes("Drill Too Deep")) {
-          console.log(`MERGE DRILL: Before merge - mergedCard.foil: ${mergedCard.foil}, manaboxCard.foil: ${manaboxCard.foil}`);
-        }
         mergedCard.foil = manaboxCard.foil;
-        if (manaboxCard.name.includes("Drill Too Deep")) {
-          console.log(`MERGE DRILL: After merge - mergedCard.foil: ${mergedCard.foil}`);
-        }
         
         // Debug logging for foil data
       } else {
@@ -666,18 +650,9 @@ function getCardCondition(card) {
 }
 
 function getCardFoil(card) {
-  // Debug for Drill Too Deep
-  if (card && card.name && card.name.includes("Drill Too Deep")) {
-    console.log(`GETFOIL DRILL: card.foil: ${card.foil}, type: ${typeof card.foil}`);
-  }
-  
   // Prioritize Manabox foil data (from merged card data)
   if (card && card.foil !== undefined) {
-    const result = card.foil ? "Foil" : "Non-Foil";
-    if (card && card.name && card.name.includes("Drill Too Deep")) {
-      console.log(`GETFOIL DRILL: returning "${result}"`);
-    }
-    return result;
+    return card.foil ? "Foil" : "Non-Foil";
   }
   
   // Fallback to Scryfall data if Manabox data is not available
