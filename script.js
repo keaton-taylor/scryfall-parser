@@ -269,9 +269,8 @@ function fetchCardData(manaboxData) {
         mbCard.setCode === scryfallCard.set
       );
       
-      if (!manaboxCard) {
-        addLogEntry(`⚠️ No Manabox data found for "${scryfallCard.name}" from ${scryfallCard.set}`, 'warning');
-      }
+      // Note: It's normal to not have Manabox data for all cards
+      // Cards will still be processed with Scryfall data and default values
       
       return {
         ...scryfallCard,
