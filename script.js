@@ -1,6 +1,8 @@
-// Global variable to store all fetched card data
+// Global variables to store all fetched card data and track batches
 let allCardData = [];
 let logEntries = [];
+let completedBatches = 0;
+let totalBatches = 0;
 
 // Logging function
 function addLogEntry(message, type = 'info') {
@@ -86,18 +88,21 @@ document.getElementById("upload").addEventListener("change", function(e) {
     
     addLogEntry(`📊 Parsed ${manaboxData.length} cards from CSV`, 'success');
     
-    // Reset global data
-    allCardData = [];
-    logEntries = []; // Clear previous logs
     fetchCardData(manaboxData);
   };
   reader.readAsText(file);
 });
 
 function parseManaboxCSV(lines) {
+  // CRITICAL: Clear all previous data completely before processing new CSV
+  allCardData = [];
+  logEntries = [];
+  completedBatches = 0;
+  totalBatches = 0;
+  
   const manaboxData = [];
   
-  addLogEntry(`🔍 Parsing CSV with ${lines.length} lines`, 'info');
+  addLogEntry(`🔍 Parsing CSV with ${lines.length} lines (cleared all previous data)`, 'info');
   
   // Skip header row and process data rows
   for (let i = 1; i < lines.length; i++) {
@@ -271,17 +276,6 @@ function fetchCardData(manaboxData) {
         mbCard.setCode === scryfallCard.set
       );
       
-      // Debug card matching for Drill Too Deep
-      if (scryfallCard.name && scryfallCard.name.includes("Drill Too Deep")) {
-        console.log(`DEBUG MATCH DRILL: Scryfall name: "${scryfallCard.name}", set: "${scryfallCard.set}"`);
-        console.log(`DEBUG MATCH DRILL: Looking for Manabox match in batch...`);
-        console.log(`DEBUG MATCH DRILL: Found manaboxCard:`, manaboxCard);
-        if (manaboxCard) {
-          console.log(`DEBUG MATCH DRILL: Manabox name: "${manaboxCard.name}", setCode: "${manaboxCard.setCode}", foil: ${manaboxCard.foil}`);
-        }
-        // Show all batch cards for comparison
-        console.log(`DEBUG MATCH DRILL: All batch cards:`, batch.map(mb => `"${mb.name}" (${mb.setCode})`));
-      }
       
       // Start with Scryfall data as the base
       const mergedCard = { ...scryfallCard };
@@ -294,13 +288,7 @@ function fetchCardData(manaboxData) {
         mergedCard.language = manaboxCard.language || "English";
         
         // For foil status, prioritize Manabox data over Scryfall data
-        if (manaboxCard.name && manaboxCard.name.includes("Drill Too Deep")) {
-          console.log(`DEBUG MERGE DRILL: Before - mergedCard.foil: ${mergedCard.foil}, manaboxCard.foil: ${manaboxCard.foil}`);
-        }
         mergedCard.foil = manaboxCard.foil;
-        if (manaboxCard.name && manaboxCard.name.includes("Drill Too Deep")) {
-          console.log(`DEBUG MERGE DRILL: After - mergedCard.foil: ${mergedCard.foil}`);
-        }
         
         // Debug logging for foil data
       } else {
@@ -317,11 +305,6 @@ function fetchCardData(manaboxData) {
     // Store card data globally
     allCardData = allCardData.concat(mergedData);
     
-    // Debug allCardData after each batch
-    const drillCard = allCardData.find(card => card.name && card.name.includes("Drill Too Deep"));
-    if (drillCard) {
-      console.log(`DEBUG ALLDATA DRILL: Found in allCardData - foil: ${drillCard.foil}, condition: ${drillCard.condition}, quantity: ${drillCard.quantity}`);
-    }
     
     completedBatches++;
     addLogEntry(`✅ Batch ${completedBatches}/${totalBatches} completed (${mergedData.length} cards)`, 'success');
@@ -665,18 +648,9 @@ function getCardCondition(card) {
 }
 
 function getCardFoil(card) {
-  // Debug specific card
-  if (card && card.name && card.name.includes("Drill Too Deep")) {
-    console.log(`DEBUG DRILL: ${card.name} - card.foil: ${card.foil}, type: ${typeof card.foil}, card object:`, card);
-  }
-  
   // Prioritize Manabox foil data (from merged card data)
   if (card && card.foil !== undefined) {
-    const result = card.foil ? "Foil" : "Non-Foil";
-    if (card && card.name && card.name.includes("Drill Too Deep")) {
-      console.log(`DEBUG DRILL RESULT: ${card.name} - returning: ${result}`);
-    }
-    return result;
+    return card.foil ? "Foil" : "Non-Foil";
   }
   
   // Fallback to Scryfall data if Manabox data is not available
