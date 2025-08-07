@@ -126,6 +126,9 @@ function parseManaboxCSV(lines) {
         purchasePriceCurrency: fields[14].trim()
       };
       
+      // Debug logging for parsing
+      console.log(`DEBUG PARSE: ${cardData.name} - Original field: "${fields[4].trim()}", Parsed foil: ${cardData.foil}`);
+      
       // Validate that we have essential data
       if (cardData.name && cardData.name.length > 0) {
         manaboxData.push(cardData);
@@ -281,6 +284,9 @@ function fetchCardData(manaboxData) {
         
         // For foil status, prioritize Manabox data over Scryfall data
         mergedCard.foil = manaboxCard.foil;
+        
+        // Debug logging for foil data
+        console.log(`DEBUG MERGE: ${manaboxCard.name} - Manabox foil: ${manaboxCard.foil}, Merged foil: ${mergedCard.foil}`);
       } else {
         // Default values when no Manabox data exists
         mergedCard.quantity = 1;
@@ -637,9 +643,14 @@ function getCardCondition(card) {
 }
 
 function getCardFoil(card) {
+  // Debug logging
+  console.log(`DEBUG GETFOIL: ${card.name} - card.foil: ${card.foil}, type: ${typeof card.foil}`);
+  
   // Prioritize Manabox foil data (from merged card data)
   if (card && card.foil !== undefined) {
-    return card.foil ? "Foil" : "Non-Foil";
+    const result = card.foil ? "Foil" : "Non-Foil";
+    console.log(`DEBUG GETFOIL RESULT: ${card.name} - returning: ${result}`);
+    return result;
   }
   
   // Fallback to Scryfall data if Manabox data is not available
