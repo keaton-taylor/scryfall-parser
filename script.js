@@ -282,7 +282,13 @@ function fetchCardData(manaboxData) {
         mergedCard.language = manaboxCard.language || "English";
         
         // For foil status, prioritize Manabox data over Scryfall data
+        if (manaboxCard.name && manaboxCard.name.includes("Drill Too Deep")) {
+          console.log(`DEBUG MERGE DRILL: Before - mergedCard.foil: ${mergedCard.foil}, manaboxCard.foil: ${manaboxCard.foil}`);
+        }
         mergedCard.foil = manaboxCard.foil;
+        if (manaboxCard.name && manaboxCard.name.includes("Drill Too Deep")) {
+          console.log(`DEBUG MERGE DRILL: After - mergedCard.foil: ${mergedCard.foil}`);
+        }
         
         // Debug logging for foil data
       } else {
