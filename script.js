@@ -317,6 +317,12 @@ function fetchCardData(manaboxData) {
     // Store card data globally
     allCardData = allCardData.concat(mergedData);
     
+    // Debug allCardData after each batch
+    const drillCard = allCardData.find(card => card.name && card.name.includes("Drill Too Deep"));
+    if (drillCard) {
+      console.log(`DEBUG ALLDATA DRILL: Found in allCardData - foil: ${drillCard.foil}, condition: ${drillCard.condition}, quantity: ${drillCard.quantity}`);
+    }
+    
     completedBatches++;
     addLogEntry(`✅ Batch ${completedBatches}/${totalBatches} completed (${mergedData.length} cards)`, 'success');
     
